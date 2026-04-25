@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+// Helper function for pacing requests to avoid rate limits
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // Initialize Supabase client
-// Note: We use SUPABASE_SERVICE_ROLE_KEY if available to bypass RLS during cron insertions.
+// We use SUPABASE_SERVICE_ROLE_KEY to ensure the script has "Write" permissions to the reddit_mentions table.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -18,7 +21,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    // 2. Fetch Businesses
+    // 2. Fetch all business names from the Supabase businesses table.
     const { data: businesses, error: dbError } = await supabase
       .from('businesses')
       .select('id, name');
@@ -29,10 +32,10 @@ export async function GET(req: Request) {
     }
 
     if (!businesses || businesses.length === 0) {
-      return NextResponse.json({ message: 'No businesses found to check.' });
+      return NextResponse.json({ success: true, message: 'No businesses found to check.' });
     }
 
-    const mentionsToInsert = [];
+    const mentionsToUpsert = [];
 
     // 3. Search Reddit
     for (const business of businesses) {
@@ -45,22 +48,25 @@ export async function GET(req: Request) {
         const url = `https://www.reddit.com/r/${sub}/search.json?q=${searchQuery}&restrict_sr=1&sort=new`;
         
         try {
+          // Pacing: 2-second pause before every Reddit API call to prevent rate-limiting.
+          await delay(2000);
+
           const response = await fetch(url, {
             headers: {
-              // User-Agent is strictly required by Reddit's API guidelines
-              'User-Agent': 'AgoraMarketplaceBot/1.0.0 (Next.js Cron Check)'
+              // The "Anti-Bot" Fix: Specific custom User-Agent
+              'User-Agent': 'AgoraMarketplace:v1.0.0 (by /u/Expensive_Peanut1164)'
             }
           });
 
           if (!response.ok) {
             console.warn(`Reddit API returned ${response.status} for ${url}`);
-            continue; // Skip safely if Reddit is down or rate limiting
+            continue; // Skip safely if Reddit is down or returning a 403/429
           }
 
           const data = await response.json();
           const posts = data?.data?.children || [];
 
-          // 4. Keyword Search Logic
+          // 4. Basic sentiment check
           for (const postObj of posts) {
             const post = postObj.data;
             if (!post) continue;
@@ -72,62 +78,50 @@ export async function GET(req: Request) {
 
             let sentiment = 'neutral';
             
-            // Basic logic: "good/recommend" (+) vs "avoid/bad" (-)
-            const positiveWords = ['good', 'recommend', 'great', 'awesome', 'best'];
-            const negativeWords = ['avoid', 'bad', 'terrible', 'worst', 'scam'];
-
-            let posCount = 0;
-            let negCount = 0;
-
-            positiveWords.forEach(word => {
-              if (content.includes(word)) posCount++;
-            });
-            negativeWords.forEach(word => {
-              if (content.includes(word)) negCount++;
-            });
-
-            if (posCount > negCount) {
+            // If the title contains "recommend" or "great," mark as positive. 
+            // If it contains "avoid," "bad," or "scam," mark as negative.
+            if (content.includes('recommend') || content.includes('great')) {
               sentiment = 'positive';
-            } else if (negCount > posCount) {
+            } else if (content.includes('avoid') || content.includes('bad') || content.includes('scam')) {
               sentiment = 'negative';
             }
 
-            mentionsToInsert.push({
+            mentionsToUpsert.push({
               business_id: business.id,
-              post_title: title,
+              post_title: title.substring(0, 255), // safety truncation
               post_url: postUrl,
               sentiment: sentiment
             });
           }
         } catch (fetchError) {
-          // Error Handling: Ensure script doesn't crash if Reddit is down
+          // Handle errors gracefully so that one failed Reddit request doesn't crash the entire loop.
           console.error(`Error fetching Reddit for ${business.name} in r/${sub}:`, fetchError);
         }
       }
-      
-      // Artificial delay to respect Reddit's API rate limits (avoiding 429 Too Many Requests)
-      await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    // 5. Save the post_title, post_url, and sentiment into the reddit_mentions table
-    if (mentionsToInsert.length > 0) {
-      const { error: insertError } = await supabase
+    // 5. Storage: Upsert into reddit_mentions
+    if (mentionsToUpsert.length > 0) {
+      // Use supabase.from('reddit_mentions').upsert() to save data.
+      // Use post_url as the conflict target to avoid duplicate entries.
+      const { error: upsertError } = await supabase
         .from('reddit_mentions')
-        .insert(mentionsToInsert);
+        .upsert(mentionsToUpsert, { onConflict: 'post_url' });
 
-      if (insertError) {
-        console.error('Error inserting reddit mentions:', insertError);
-        return NextResponse.json({ error: 'Failed to save mentions to database', details: insertError }, { status: 500 });
+      if (upsertError) {
+        console.error('Error upserting reddit mentions:', upsertError);
+        // Continue and return success: false if db fails, or still return success: true but log error
+        return NextResponse.json({ error: 'Failed to save mentions to database', details: upsertError }, { status: 500 });
       }
     }
 
     return NextResponse.json({ 
       success: true, 
-      mentions_found_and_saved: mentionsToInsert.length 
+      mentions_upserted: mentionsToUpsert.length 
     });
 
   } catch (error) {
     console.error('Unhandled error in reddit-check cron:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
   }
 }
