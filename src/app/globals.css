@@ -1,0 +1,304 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Merriweather:wght@300;400;700;900&display=swap');
+@import "tailwindcss";
+
+/* ============================================================
+   AGORA NS — Light Glassy Design System (Apple ADR Inspired)
+   ============================================================ */
+
+:root {
+  /* --- Core Palette --- */
+  --bg-main: #F5F7FA;
+  --bg-card: #FFFFFF;
+  --border-subtle: rgba(0, 0, 0, 0.05);
+
+  /* --- Apple-Standard Colors --- */
+  --apple-blue: #0071E3;
+  --apple-blue-rgb: 0, 113, 227;
+  --apple-gray: #86868B;
+  --apple-dark: #1D1D1F;
+  --forest-green: #248A3D;
+  /* Glossy darker green for light mode */
+
+  /* --- Glass Utility --- */
+  --glass-bg: rgba(255, 255, 255, 0.70);
+  --glass-border: rgba(255, 255, 255, 0.3);
+
+  /* --- Text --- */
+  --text-primary: #1D1D1F;
+  --text-secondary: #86868B;
+  --text-muted: #A1A1A6;
+
+  /* --- Shadows --- */
+  --shadow-soft: 0 20px 50px rgba(0, 0, 0, 0.05);
+  --shadow-hover: 0 30px 60px rgba(0, 0, 0, 0.08);
+
+  /* --- Legacy compat aliases --- */
+  --background: var(--bg-main);
+  --foreground: var(--text-primary);
+  --primary: var(--apple-blue);
+  --accent: #FF9F0A;
+  /* SF Orange */
+}
+
+@theme inline {
+  --color-background: var(--bg-main);
+  --color-foreground: var(--text-primary);
+  --color-primary: var(--apple-blue);
+  --color-accent: #FF9F0A;
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  /* Body text tracking per ADR */
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Inter', sans-serif;
+  /* SF Pro substitute */
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text-primary);
+  letter-spacing: -0.015em;
+  /* Heading tracking per ADR */
+}
+
+/* ============================================================
+   APPLE DESIGN COMPONENTS
+   ============================================================ */
+
+.apple-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  box-shadow: var(--shadow-soft);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.apple-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
+}
+
+.glass-header {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* ============================================================
+   BUTTONS (Glossy Apple)
+   ============================================================ */
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--apple-blue);
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  border-radius: 980px;
+  /* Apple pill button */
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: #0077ED;
+  box-shadow: 0 4px 15px rgba(0, 113, 227, 0.3);
+}
+
+.btn-green {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--forest-green);
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  border-radius: 980px;
+  font-weight: 700;
+  font-size: 1rem;
+  transition: all 0.25s ease;
+  border: none;
+}
+
+.btn-green:hover {
+  opacity: 0.9;
+  transform: scale(1.02);
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  color: var(--apple-blue);
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.btn-ghost:hover {
+  text-decoration: underline;
+}
+
+/* ============================================================
+   VERIFIED BADGE (Glossy 3D)
+   ============================================================ */
+
+.verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: linear-gradient(135deg, rgba(36, 138, 61, 0.1) 0%, rgba(36, 138, 61, 0.02) 100%);
+  color: var(--forest-green);
+  border: 1px solid rgba(36, 138, 61, 0.2);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  position: relative;
+}
+
+.verified-badge.pulse {
+  animation: badge-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes badge-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.9;
+    transform: scale(1.03);
+  }
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+
+@keyframes blur-in {
+  from {
+    filter: blur(10px);
+    opacity: 0;
+    transform: scale(1.05);
+  }
+
+  to {
+    filter: blur(0);
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-blur-in {
+  animation: blur-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ============================================================
+   LAYOUT UTILITIES
+   ============================================================ */
+
+.section-padding {
+  padding: 8rem 1.25rem;
+}
+
+.section-padding-sm {
+  padding: 4rem 1.25rem;
+}
+
+@media (max-width: 768px) {
+  .section-padding {
+    padding: 4rem 1rem;
+  }
+
+  .section-padding-sm {
+    padding: 2rem 1rem;
+  }
+}
+
+/* ============================================================
+   CANVAS OVERRIDES
+   ============================================================ */
+
+.canvas-sticky-container {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--bg-main);
+}
+
+.canvas-beat-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* ============================================================
+   ACCESSIBLE FOCUS (SF Blue)
+   ============================================================ */
+
+:focus-visible {
+  outline: 4px solid rgba(var(--apple-blue-rgb), 0.5);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   MAP & MISC
+   ============================================================ */
+
+.leaflet-container {
+  background: #f0f0f0 !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(10px);
+  border-radius: 12px !important;
+  box-shadow: var(--shadow-soft) !important;
+}
